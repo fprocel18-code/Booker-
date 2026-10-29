@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generador Profesional de Libros</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pdfmake/build/pdfmake.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pdfmake/build/vfs_fonts.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html-to-pdfmake/browser.js"></script>
+    <script src="https://unpkg.com/docx@8.2.3/build/index.umd.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+<body class="bg-gray-100 min-h-screen p-4 md:p-8 font-sans text-gray-800">
+
+    <div class="max-w-5xl mx-auto">
+        <h1 class="text-3xl font-bold text-center mb-8 text-blue-900">Generador Profesional de Libros</h1>
+
+        <!-- SECCIÓN DE GESTIÓN DE PROYECTOS (JSON) -->
+        <div class="bg-white p-5 rounded-lg shadow-md mb-6 border-t-4 border-purple-500 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div>
+                <h2 class="text-lg font-semibold text-purple-900">Gestión de Proyectos</h2>
+                <p class="text-sm text-gray-600">Descarga tu libro como archivo para no perderlo y cargarlo después[span_0](start_span)[span_0](end_span).</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-3 justify-center w-full md:w-auto">
+                <input type="text" id="bookTitle" placeholder="📖 Título de tu libro..." class="border-2 border-purple-300 rounded px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-transparent flex-1 md:w-64 font-bold text-gray-700">
+                <label class="cursor-pointer bg-gray-200 hover:bg-gray-300 text-gray-800 text-sm font-bold py-2 px-4 rounded transition flex items-center mb-0">
+                    <span>📂 Cargar</span>
+                    <input type="file" id="loadProjectFile" accept=".json" class="hidden">
+                </label>
+                <button id="saveProjectBtn" class="bg-purple-100 hover:bg-purple-200 text-purple-800 text-sm font-bold py-2 px-4 rounded transition flex items-center">
+                    <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
+                    Guardar
+                </button>
+            </div>
+        </div>
+
+        <!-- 1. SECCIÓN DE PORTADA -->
+        <div class="bg-white p-6 rounded-lg shadow-md mb-6 border-t-4 border-blue-500">
+            <h2 class="text-xl font-semibold mb-4">1. Portada del Libro (Opcional)</h2>
+            <label class="flex items-center space-x-3 cursor-pointer mb-4">
+                <input type="checkbox" id="checkCover" class="form-checkbox h-5 w-5 text-blue-600 rounded">
+                <span class="text-gray-700 font-medium">Incluir una imagen como portada</span>
+            </label>
+            <div id="coverContainer" class="hidden mt-4 p-4 border-2 border-dashed border-gray-300 rounded bg-gray-50">
+                <input type="file" id="coverFile" accept="image/*" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200 cursor-pointer">
+                <div class="mt-4 flex justify-center">
+                    <img id="coverPreview" class="max-h-64 object-contain hidden border border-gray-200 p-1 bg-white shadow-sm" alt="Preview de portada" />
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. CONFIGURACIÓN -->
+        <div class="bg-white p-6 rounded-lg shadow-md mb-6 border-t-4 border-yellow-500">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <div class="w-full md:w-1/2 pr-0 md:pr-4">
+                    <h2 class="text-xl font-semibold mb-2">2. Configuración de Letra</h2>
+                    <label class="block text-gray-700 font-medium mb-2">Tamaño de fuente: <span id="fontSizeDisplay" class="text-blue-600 font-bold text-lg">12 pt</span></label>
+                    <input type="range" id="fontSizeSlider" min="8" max="32" value="12" step="1" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                </div>
+                <div class="w-full md:w-1/2 mt-6 md:mt-0 bg-yellow-50 border border-yellow-200 p-4 rounded-lg text-center shadow-inner">
+                    <p class="text-yellow-800 font-medium text-sm uppercase tracking-wide">Páginas Estimadas</p>
+                    <p class="text-4xl font-extrabold text-yellow-600 mt-1">~<span id="pageCountDisplay">1</span></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. BUSCAR Y REEMPLAZAR -->
+        <div class="bg-white p-6 rounded-lg shadow-md mb-6 border-t-4 border-orange-500">
+            <h2 class="text-xl font-semibold mb-4">3. Buscar y Reemplazar</h2>
+            <p class="text-sm text-gray-600 mb-4">Reemplaza una palabra o frase en todos los capítulos de tu libro simultáneamente.</p>
+            <div class="flex flex-col md:flex-row gap-4 items-end">
+                <div class="flex-1 w-full">
+                    <label class="block text-gray-700 font-medium mb-1 text-sm">Buscar texto:</label>
+                    <input type="text" id="findInput" placeholder="Palabra o frase a buscar..." class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500">
+                </div>
+                <div class="flex-1 w-full">
+                    <label class="block text-gray-700 font-medium mb-1 text-sm">Reemplazar con:</label>
+                    <input type="text" id="replaceInput" placeholder="Nuevo texto..." class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500">
+                </div>
+                <div class="flex flex-col gap-2 pb-2 w-full md:w-auto">
+                    <label class="flex items-center space-x-2 text-sm text-gray-700 cursor-pointer">
+                        <input type="checkbox" id="matchCase" class="form-checkbox h-4 w-4 text-orange-600 rounded">
+                        <span>Sensible a mayúsculas</span>
+                    </label>
+                </div>
+                <div class="w-full md:w-auto mt-2 md:mt-0">
+                    <button id="replaceAllBtn" class="w-full bg-orange-100 hover:bg-orange-200 text-orange-800 text-sm font-bold py-2 px-6 rounded transition flex items-center justify-center">
+                        <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                        Reemplazar en Todo
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. AUTOMATIZACIÓN DE PROMPTS -->
+        <div class="bg-white p-6 rounded-lg shadow-md mb-6 border-t-4 border-indigo-400">
+            <h2 class="text-xl font-semibold mb-3">4. Automatización de Prompts entre ({ y })</h2>
+            <div class="flex flex-col md:flex-row gap-6">
+                <label class="flex items-center space-x-3 cursor-pointer">
+                    <input type="checkbox" id="checkDeletePrompts" class="form-checkbox h-5 w-5 text-indigo-600 rounded">
+                    <span class="text-gray-700 font-medium">Eliminar automáticamente prompts entre <code class="bg-gray-100 px-1 rounded">({</code> y <code class="bg-gray-100 px-1 rounded">})</code></span>
+                </label>
+                <label class="flex items-center space-x-3 cursor-pointer">
+                    <input type="checkbox" id="checkReplacePrompts" class="form-checkbox h-5 w-5 text-indigo-600 rounded">
+                    <span class="text-gray-700 font-medium">Reemplazar prompts por etiquetas <code class="bg-gray-100 px-1 rounded">[Insertar imagen: imagen (N)]</code></span>
+                </label>
+            </div>
+        </div>
+
+        <!-- 5. CAPÍTULOS -->
+        <div class="bg-white p-6 rounded-lg shadow-md mb-6 border-t-4 border-green-500">
+            <div class="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
+                <h2 class="text-xl font-semibold">5. Contenido del Libro</h2>
+                
+                <!-- Controles para añadir capítulos individualmente o en lote -->
+                <div class="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end">
+                    <div class="flex items-center gap-1 bg-gray-50 border border-gray-300 rounded px-2 py-1">
+                        <span class="text-xs font-medium text-gray-600">Cantidad:</span>
+                        <input type="number" id="batchCountInput" min="1" max="100" value="5" class="w-16 text-center border border-gray-300 rounded text-sm py-0.5 px-1 focus:outline-none focus:ring-1 focus:ring-green-500">
+                        <button onclick="addMultipleChapters()" class="bg-green-100 hover:bg-green-200 text-green-800 text-xs font-bold py-1.5 px-3 rounded transition flex items-center">
+                            ➕ Añadir en Lote
+                        </button>
+                    </div>
+                    <button onclick="addChapter()" class="flex items-center bg-blue-100 hover:bg-blue-200 text-blue-800 text-xs font-bold py-2 px-3 rounded transition">
+                        ➕ Añadir al Final
+                    </button>
+                </div>
+            </div>
+            
+            <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-6 rounded text-sm text-gray-700">
+                <strong>¡Gestión Independiente por Capítulo!</strong> 
+                <ul class="list-disc ml-5 mt-2 space-y-1">
+                    <li>Usa <strong>🖼️ Insertar (Cursor)</strong> para colocar una imagen justo donde está tu cursor[span_1](start_span)[span_1](end_span).</li>
+                    <li>Usa <strong>📂 Cargar Múltiples</strong> en cada capítulo para subir un bloque de imágenes (ej. <code class="bg-blue-100 px-1 rounded">imagen (1).jpg</code>) y enlazarlas mediante etiquetas como <code class="bg-blue-100 px-1 rounded">[Insertar imagen: imagen (1)]</code>[span_2](start_span)[span_2](end_span)[span_3](start_span)[span_3](end_span).</li>
+                </ul>
+            </div>
+            <div id="chaptersContainer" class="space-y-6"></div>
+        </div>
+
+        <!-- BOTONES DE EXPORTACIÓN -->
+        <div class="flex flex-col md:flex-row flex-wrap justify-center gap-4 mt-8 pb-10">
+            <button id="exportPdfBtn" class="flex-1 flex items-center justify-center bg-red-600 hover:bg-red-700 text-white text-base md:text-lg font-bold py-4 px-6 rounded-full shadow-lg transition transform hover:-translate-y-1">PDF</button>
+            <button id="exportWordBtn" class="flex-1 flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white text-base md:text-lg font-bold py-4 px-6 rounded-full shadow-lg transition transform hover:-translate-y-1">Word (DOCX)</button>
+            <button id="exportEpubBtn" class="flex-1 flex items-center justify-center bg-green-600 hover:bg-green-700 text-white text-base md:text-lg font-bold py-4 px-6 rounded-full shadow-lg transition transform hover:-translate-y-1">EPUB (eBook)</button>
+        </div>
+    </div>
+
+    <script>
+        marked.use({ xhtml: true, gfm: true });
+        pdfMake.vfs = pdfMake.vfs || pdfMake.fonts;
+        let chapterCount = 0;
+
+        const checkCover = document.getElementById('checkCover');
+        const coverContainer = document.getElementById('coverContainer');
+        const coverFile = document.getElementById('coverFile');
+        const coverPreview = document.getElementById('coverPreview');
+        const fontSizeSlider = document.getElementById('fontSizeSlider');
+        const fontSizeDisplay = document.getElementById('fontSizeDisplay');
+        const pageCountDisplay = document.getElementById('pageCountDisplay');
+        const chaptersContainer = document.getElementById('chaptersContainer');
+        
+        const checkDeletePrompts = document.getElementById('checkDeletePrompts');
+        const checkReplacePrompts = document.getElementById('checkReplacePrompts');
+
+        const exportPdfBtn = document.getElementById('exportPdfBtn');
+        const exportWordBtn = document.getElementById('exportWordBtn');
+        const exportEpubBtn = document.getElementById('exportEpubBtn');
+        
+        const bookTitleInput = document.getElementById('bookTitle');
+        const saveProjectBtn = document.getElementById('saveProjectBtn');
+        const loadProjectFile = document.getElementById('loadProjectFile');
+
+        const findInput = document.getElementById('findInput');
+        const replaceInput = document.getElementById('replaceInput');
+        const matchCase = document.getElementById('matchCase');
+        const replaceAllBtn = document.getElementById('replaceAllBtn');
+
+        // Hacer mutuamente excluyentes los checkboxes de prompts
+        checkDeletePrompts.addEventListener('change', () => {
+            if (checkDeletePrompts.checked) checkReplacePrompts.checked = false;
+        });
+        checkReplacePrompts.addEventListener('change', () => {
+            if (checkReplacePrompts.checked) checkDeletePrompts.checked = false;
+        });
+
+        function escapeXML(str) { return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;'); }
+        function escapeRegExp(string) { return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+        function getBookFileName() {
+            let title = bookTitleInput.value.trim();
+            if (!title) title = "Mi_Libro_Generado";
+            return title.replace(/[\/\\?%*:|"<>]/g, '-'); 
+        }
+
+        checkCover.addEventListener('change', (e) => {
+            if(e.target.checked) coverContainer.classList.remove('hidden');
+            else coverContainer.classList.add('hidden');
+            calculatePages();
+        });
+
+        coverFile.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if(file) {
+                const reader = new FileReader();
+                reader.onload = (event) => { coverPreview.src = event.target.result; coverPreview.classList.remove('hidden'); calculatePages(); };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        replaceAllBtn.addEventListener('click', () => {
+            const findStr = findInput.value;
+            const replaceStr = replaceInput.value;
+            if (!findStr) { alert("Por favor, ingresa el texto que deseas buscar."); return; }
+
+            const textareas = document.querySelectorAll('.chapter-textarea');
+            let totalReplacements = 0;
+            const flags = matchCase.checked ? 'g' : 'gi';
+            const regex = new RegExp(escapeRegExp(findStr), flags);
+
+            textareas.forEach(textarea => {
+                const originalText = textarea.value;
+                if (!originalText) return;
+                const matches = originalText.match(regex);
+                if (matches) {
+                    totalReplacements += matches.length;
+                    textarea.value = originalText.replace(regex, replaceStr);
+                }
+            });
+
+            if (totalReplacements > 0) {
+                alert(`¡Éxito! Se realizaron ${totalReplacements} reemplazos en todo el libro.`);
+                calculatePages();
+            } else { alert("No se encontró el texto en ningún capítulo."); }
+        });
+
+        saveProjectBtn.addEventListener('click', () => {
+            const cards = document.querySelectorAll('.chapter-card');
+            const chaptersData = Array.from(cards).map(card => {
+                return {
+                    text: card.querySelector('.chapter-textarea').value,
+                    images: JSON.parse(card.dataset.images || "{}")
+                };
+            });
+
+            const projectData = { chapters: chaptersData, fontSize: fontSizeSlider.value };
+            if (checkCover.checked && coverPreview.src) projectData.cover = coverPreview.src;
+
+            const dataStr = JSON.stringify(projectData);
+            const blob = new Blob([dataStr], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            
+            const downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.href = url;
+            downloadAnchorNode.download = getBookFileName() + ".json";
+            document.body.appendChild(downloadAnchorNode);
+            downloadAnchorNode.click();
+            document.body.removeChild(downloadAnchorNode);
+            URL.revokeObjectURL(url);
+        });
+
+        loadProjectFile.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    const projectData = JSON.parse(event.target.result);
+                    chaptersContainer.innerHTML = ''; 
+                    chapterCount = 0;
+                    
+                    if (projectData.chapters && projectData.chapters.length > 0) {
+                        projectData.chapters.forEach(chap => { 
+                            addChapter(); 
+                            const lastCard = chaptersContainer.lastElementChild;
+                            lastCard.querySelector('.chapter-textarea').value = typeof chap === 'string' ? chap : chap.text;
+                            if (chap.images) {
+                                lastCard.dataset.images = JSON.stringify(chap.images);
+                                updateChapterImagePreview(lastCard);
+                            }
+                        });
+                    } else { addChapter(); }
+                    
+                    if (projectData.fontSize) { 
+                        fontSizeSlider.value = projectData.fontSize; 
+                        fontSizeDisplay.textContent = projectData.fontSize + ' pt'; 
+                    }
+                    
+                    if (projectData.cover) { 
+                        checkCover.checked = true; 
+                        coverContainer.classList.remove('hidden'); 
+                        coverPreview.src = projectData.cover; 
+                        coverPreview.classList.remove('hidden'); 
+                    } else {
+                        checkCover.checked = false;
+                        coverContainer.classList.add('hidden');
+                        coverPreview.src = "";
+                    }
+                    
+                    bookTitleInput.value = file.name.replace('.json', '');
+                    calculatePages(); 
+                } catch (err) { alert("Error: El archivo no es válido o está corrupto."); console.error(err); }
+                e.target.value = '';
+            };
+            reader.readAsText(file);
+        });
+
+        function calculatePages() {
+            let charsPerPage = 500000 / (Math.pow(parseInt(fontSizeSlider.value), 2)); 
+            let estimatedPages = checkCover.checked && coverPreview.src ? 1 : 0;
+            document.querySelectorAll('.chapter-textarea').forEach((t) => { if (t.value.trim().length > 0) estimatedPages += Math.ceil(t.value.trim().length / charsPerPage); });
+            pageCountDisplay.textContent = estimatedPages || 1;
+        }
+
+        fontSizeSlider.addEventListener('input', (e) => { fontSizeDisplay.textContent = e.target.value + ' pt'; calculatePages(); });
+
+        // Función para añadir múltiples capítulos de golpe
+        function addMultipleChapters() {
+            const input = document.getElementById('batchCountInput');
+            const count = parseInt(input.value);
+            if (isNaN(count) || count <= 0) {
+                alert("Por favor, ingresa un número válido de capítulos.");
+                return;
+            }
+            for (let i = 0; i < count; i++) {
+                addChapter();
+            }
+        }
+
+        // Procesador de Prompts entre ({ y })
+        function processPromptsInText(textarea) {
+            let val = textarea.value;
+            let changed = false;
+
+            if (checkDeletePrompts && checkDeletePrompts.checked) {
+                const regex = /\(\s*\{[\s\S]*?\}\s*\)/g;
+                if (regex.test(val)) {
+                    val = val.replace(regex, '');
+                    changed = true;
+                }
+            } else if (checkReplacePrompts && checkReplacePrompts.checked) {
+                let counter = 1;
+                const regex = /\(\s*\{[\s\S]*?\}\s*\)/g;
+                if (regex.test(val)) {
+                    val = val.replace(regex, () => {
+                        const tag = `[Insertar imagen: imagen (${counter})]`;
+                        counter++;
+                        return tag;
+                    });
+                    changed = true;
+                }
+            }
+
+            if (changed) {
+                const start = textarea.selectionStart;
+                textarea.value = val;
+                const newPos = Math.min(start, val.length);
+                textarea.setSelectionRange(newPos, newPos);
+            }
+        }
+
+        chaptersContainer.addEventListener('input', (e) => {
+            if (e.target && e.target.classList.contains('chapter-textarea')) {
+                processPromptsInText(e.target);
+            }
+            calculatePages();
+        });
+
+        chaptersContainer.addEventListener('paste', (e) => {
+            if (e.target && e.target.classList.contains('chapter-textarea')) {
+                setTimeout(() => {
+                    processPromptsInText(e.target);
+                    calculatePages();
+                }, 10);
+            }
+        });
+
+        function addChapter(referenceCard = null) {
+            chapterCount++;
+            const div = document.createElement('div');
+            
+            div.innerHTML = `
+                <div class="chapter-card relative bg-gray-50 border border-gray-200 rounded p-4 flex flex-col transition-all duration-300" data-id="${chapterCount}" data-marker-a="" data-marker-b="" data-images="{}">
+                    <div class="flex flex-wrap justify-between items-center mb-3 gap-2">
+                        <h3 class="font-bold text-gray-700 text-lg">Capítulo <span class="chapter-number">${chapterCount}</span></h3>
+                        
+                        <div class="flex flex-wrap gap-2 items-center">
+                            <label class="bg-emerald-100 hover:bg-emerald-200 text-emerald-800 text-xs font-bold py-1 px-2 rounded flex items-center cursor-pointer transition" title="Inserta una imagen justo donde está el cursor">
+                                🖼️ Insertar (Cursor)
+                                <input type="file" accept="image/*" class="hidden" onchange="insertSingleImageAtCursor(this)">
+                            </label>
+
+                            <label class="bg-indigo-100 hover:bg-indigo-200 text-indigo-800 text-xs font-bold py-1 px-2 rounded flex items-center cursor-pointer transition" title="Carga múltiples imágenes para este capítulo (ej: imagen (1).jpg)">
+                                📂 Cargar Múltiples
+                                <input type="file" accept="image/*" multiple class="hidden" onchange="loadMultipleImagesIntoChapter(this)">
+                            </label>
+
+                            <button onclick="toggleFullscreen(this)" class="bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-bold py-1 px-2 rounded flex items-center transition">
+                                ⛶
+                            </button>
+                            <button onclick="addChapter(this.closest('.chapter-card'))" class="bg-blue-100 hover:bg-blue-200 text-blue-700 text-xs font-bold py-1 px-2 rounded flex items-center transition">
+                                ➕
+                            </button>
+                            <button onclick="deleteChapter(this)" class="bg-red-100 hover:bg-red-200 text-red-700 text-xs font-bold py-1 px-2 rounded flex items-center transition">
+                                🗑️
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="chapter-images-preview flex flex-wrap gap-2 mb-3 p-2 bg-white border border-dashed border-gray-300 rounded hidden"></div>
+
+                    <div class="flex flex-wrap items-center gap-2 mb-2 bg-indigo-50 border border-indigo-100 p-2 rounded text-xs">
+                        <span class="font-semibold text-indigo-900">⚡ Marcadores Rápidos:</span>
+                        <button onclick="setMarker(this, 'A')" class="bg-indigo-200 hover:bg-indigo-300 text-indigo-800 font-bold py-1 px-2.5 rounded transition shadow-sm">📍 Marcar A</button>
+                        <button onclick="setMarker(this, 'B')" class="bg-indigo-200 hover:bg-indigo-300 text-indigo-800 font-bold py-1 px-2.5 rounded transition shadow-sm">📍 Marcar B</button>
+                        <button onclick="copyBetweenMarkers(this)" class="bg-green-200 hover:bg-green-300 text-green-800 font-bold py-1 px-2.5 rounded transition shadow-sm">📋 Copiar A→B</button>
+                        <span class="marker-status text-indigo-700 font-mono ml-auto">A: [Vacío] | B: [Vacío]</span>
+                    </div>
+
+                    <textarea class="chapter-textarea w-full h-64 flex-grow p-4 border border-gray-300 rounded focus:ring-2 focus:ring-blue-400 outline-none resize-y text-sm font-mono shadow-inner" placeholder="Escribe tu capítulo aquí..."></textarea>
+                </div>
+            `;
+            
+            const newCard = div.firstElementChild;
+            if (referenceCard) referenceCard.insertAdjacentElement('afterend', newCard);
+            else chaptersContainer.appendChild(newCard);
+            
+            updateChapterNumbers(); 
+            calculatePages();
+        }
+
+        function insertSingleImageAtCursor(inputElement) {
+            const file = inputElement.files[0];
+            if (!file) return;
+
+            const currentScrollY = window.scrollY;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const base64Img = e.target.result;
+                const card = inputElement.closest('.chapter-card');
+                const textarea = card.querySelector('.chapter-textarea');
+                
+                let imagesObj = JSON.parse(card.dataset.images || "{}");
+                const imgId = "id_" + Date.now(); 
+                imagesObj[imgId] = base64Img;
+                card.dataset.images = JSON.stringify(imagesObj);
+
+                const imgTag = `\n[IMAGEN: ${imgId}]\n`;
+                const startPos = textarea.selectionStart;
+                const endPos = textarea.selectionEnd;
+                const textVal = textarea.value;
+
+                textarea.value = textVal.substring(0, startPos) + imgTag + textVal.substring(endPos, textVal.length);
+                textarea.selectionStart = startPos + imgTag.length;
+                textarea.selectionEnd = startPos + imgTag.length;
+
+                inputElement.value = '';
+                calculatePages();
+                updateChapterImagePreview(card);
+                window.scrollTo(0, currentScrollY);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function loadMultipleImagesIntoChapter(inputElement) {
+            const files = inputElement.files;
+            if (!files || files.length === 0) return;
+
+            const card = inputElement.closest('.chapter-card');
+            let imagesObj = JSON.parse(card.dataset.images || "{}");
+
+            Array.from(files).forEach(file => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const base64Img = e.target.result;
+                    const fullName = file.name.toLowerCase(); 
+                    const nameWithoutExt = fullName.substring(0, fullName.lastIndexOf('.')) || fullName; 
+
+                    imagesObj[fullName] = base64Img;
+                    imagesObj[nameWithoutExt] = base64Img;
+
+                    card.dataset.images = JSON.stringify(imagesObj);
+                    updateChapterImagePreview(card);
+                };
+                reader.readAsDataURL(file);
+            });
+            inputElement.value = '';
+        }
+
+        function updateChapterImagePreview(card) {
+            const previewContainer = card.querySelector('.chapter-images-preview');
+            const imagesObj = JSON.parse(card.dataset.images || "{}");
+            const keys = Object.keys(imagesObj);
+
+            if (keys.length === 0) {
+                previewContainer.classList.add('hidden');
+                previewContainer.innerHTML = '';
+                return;
+            }
+
+            previewContainer.classList.remove('hidden');
+            previewContainer.innerHTML = `<span class="text-xs font-bold text-gray-500 w-full mb-1">Imágenes cargadas en este capítulo:</span>`;
+            
+            const seen = new Set();
+            keys.forEach(k => {
+                const src = imagesObj[k];
+                if (seen.has(src)) return;
+                seen.add(src);
+
+                const item = document.createElement('div');
+                item.className = 'relative border rounded p-1 bg-gray-50 flex flex-col items-center w-20 shadow-sm';
+                item.innerHTML = `
+                    <img src="${src}" class="w-14 h-14 object-cover rounded mb-1 border" />
+                    <span class="text-[9px] text-gray-600 truncate w-full text-center" title="${k}">${k}</span>
+                `;
+                previewContainer.appendChild(item);
+            });
+        }
+
+        function setMarker(btn, type) {
+            const card = btn.closest('.chapter-card');
+            const textarea = card.querySelector('.chapter-textarea');
+            const pos = textarea.selectionStart;
+            if (type === 'A') card.dataset.markerA = pos;
+            else card.dataset.markerB = pos;
+            updateMarkerStatus(card);
+        }
+
+        function updateMarkerStatus(card) {
+            const statusSpan = card.querySelector('.marker-status');
+            const a = card.dataset.markerA;
+            const b = card.dataset.markerB;
+            statusSpan.textContent = `A: ${a !== "" && a !== undefined ? 'Pos ' + a : '[Vacío]'} | B: ${b !== "" && b !== undefined ? 'Pos ' + b : '[Vacío]'}`;
+        }
+
+        function copyBetweenMarkers(btn) {
+            const card = btn.closest('.chapter-card');
+            const textarea = card.querySelector('.chapter-textarea');
+            const a = card.dataset.markerA;
+            const b = card.dataset.markerB;
+
+            if (a === "" || a === undefined || b === "" || b === undefined) {
+                alert("Por favor, establece tanto el Marcador A como el Marcador B antes de copiar.");
+                return;
+            }
+
+            const start = Math.min(parseInt(a), parseInt(b));
+            const end = Math.max(parseInt(a), parseInt(b));
+            const textToCopy = textarea.value.substring(start, end);
+
+            if (!textToCopy) { alert("El rango seleccionado entre los marcadores está vacío."); return; }
+
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(textToCopy).then(() => {
+                    alert("¡Texto copiado al portapapeles con éxito!");
+                }).catch(() => { fallbackCopyText(textToCopy); });
+            } else { fallbackCopyText(textToCopy); }
+        }
+
+        function fallbackCopyText(text) {
+            const tempTextArea = document.createElement("textarea");
+            tempTextArea.value = text;
+            document.body.appendChild(tempTextArea);
+            tempTextArea.select();
+            try { document.execCommand('copy'); alert("¡Texto copiado al portapapeles con éxito!"); } 
+            catch (err) { alert("No se pudo copiar el texto automáticamente."); }
+            document.body.removeChild(tempTextArea);
+        }
+
+        function deleteChapter(btn) {
+            if(confirm('¿Seguro que deseas eliminar este capítulo?')) {
+                btn.closest('.chapter-card').remove(); 
+                updateChapterNumbers(); 
+                calculatePages();
+                if (chaptersContainer.children.length === 0) addChapter();
+            }
+        }
+
+        function toggleFullscreen(btn) {
+            const card = btn.closest('.chapter-card');
+            const textarea = card.querySelector('.chapter-textarea');
+            const isFullscreen = card.classList.contains('fixed');
+
+            if (!isFullscreen) {
+                card.classList.remove('relative', 'rounded', 'border-gray-200');
+                card.classList.add('fixed', 'inset-0', 'z-50', 'bg-white', 'p-8', 'm-0');
+                textarea.classList.remove('h-64');
+                textarea.classList.add('h-[calc(100vh-180px)]');
+                btn.innerHTML = '🗗';
+                document.body.style.overflow = 'hidden';
+            } else {
+                card.classList.add('relative', 'rounded', 'border-gray-200');
+                card.classList.remove('fixed', 'inset-0', 'z-50', 'bg-white', 'p-8', 'm-0');
+                textarea.classList.remove('h-[calc(100vh-180px)]');
+                textarea.classList.add('h-64');
+                btn.innerHTML = '⛶';
+                document.body.style.overflow = 'auto';
+            }
+        }
+
+        function updateChapterNumbers() {
+            const cards = chaptersContainer.querySelectorAll('.chapter-card');
+            cards.forEach((card, i) => { card.querySelector('.chapter-number').textContent = i + 1; });
+            chapterCount = cards.length;
+        }
+        
+        addChapter();
+
+        function convertAsciiGridToHtml(lines) {
+            let html = '<table class="ascii-converted-table">\n';
+            let rowCells = [];
+            let isFirstRow = true;
+            for (let line of lines) {
+                if (line.startsWith('+-') || line.startsWith('+=')) {
+                    if (rowCells.length > 0) {
+                        let tag = isFirstRow ? 'th' : 'td';
+                        html += '<tr>\n' + rowCells.map(c => `<${tag}>${marked.parseInline(c.trim())}</${tag}>`).join('\n') + '\n</tr>\n';
+                        rowCells = [];
+                        isFirstRow = false;
+                    }
+                } else if (line.startsWith('|')) {
+                    let inner = line.substring(1, line.length - (line.endsWith('|') ? 1 : 0));
+                    let parts = inner.split('|');
+                    if (rowCells.length === 0) rowCells = parts.map(p => p.trim());
+                    else {
+                        for (let i = 0; i < parts.length; i++) {
+                            if (rowCells[i] !== undefined) { if (parts[i].trim() !== '') rowCells[i] += ' ' + parts[i].trim(); }
+                            else rowCells[i] = parts[i].trim();
+                        }
+                    }
+                }
+            }
+            html += '</table>\n';
+            return html;
+        }
+
+        function processAsciiTables(text) {
+            const lines = text.split('\n');
+            let out = [];
+            let inTable = false;
+            let tableLines = [];
+            for (let i = 0; i < lines.length; i++) {
+                let line = lines[i];
+                let trimmed = line.trim();
+                if (!inTable) {
+                    if (trimmed.startsWith('+-') && trimmed.endsWith('+') && trimmed.includes('---')) {
+                        inTable = true;
+                        tableLines.push(trimmed);
+                    } else out.push(line);
+                } else {
+                    tableLines.push(trimmed);
+                    if (trimmed.startsWith('+-') || trimmed.startsWith('+=')) {
+                        let nextLine = (i + 1 < lines.length) ? lines[i+1].trim() : '';
+                        if (!nextLine.startsWith('|') && !nextLine.startsWith('+-') && !nextLine.startsWith('+=')) {
+                            if (tableLines.some(l => l.includes('|'))) out.push(convertAsciiGridToHtml(tableLines));
+                            else out.push(...tableLines);
+                            inTable = false;
+                            tableLines = [];
+                        }
+                    }
+                }
+            }
+            if (tableLines.length > 0) out.push(...tableLines);
+            return out.join('\n');
+        }
+
+        function autoFormatText(text) {
+            text = processAsciiTables(text);
+            const lines = text.split('\n');
+            let isFirstNonEmptyLine = true;
+            let formattedLines = [];
+
+            for (let i = 0; i < lines.length; i++) {
+                let line = lines[i];
+                let trimmed = line.trim();
+
+                if (trimmed === '') { formattedLines.push(line); continue; }
+                if (trimmed.includes('|') || trimmed.match(/^\|?-{3,}/) || trimmed.startsWith('<') || trimmed.startsWith('[IMAGEN:') || trimmed.startsWith('[Insertar imagen:')) {
+                    isFirstNonEmptyLine = false; 
+                    formattedLines.push(line);
+                    continue;
+                }
+
+                if (isFirstNonEmptyLine) {
+                    isFirstNonEmptyLine = false;
+                    if (!trimmed.startsWith('#')) formattedLines.push('# ' + trimmed);
+                    else formattedLines.push(line);
+                    continue;
+                }
+
+                if (!trimmed.startsWith('#')) {
+                    const prevLineEmpty = (i === 0 || lines[i - 1].trim() === '');
+                    const isShort = trimmed.length > 0 && trimmed.length < 100;
+                    const noEndsWithPunctuation = !/[.:;?!]$/.test(trimmed); 
+                    if (prevLineEmpty && isShort && noEndsWithPunctuation) {
+                        formattedLines.push('## ' + trimmed);
+                        continue;
+                    }
+                }
+                formattedLines.push(line);
+            }
+            return formattedLines.join('\n');
+        }
+
+        function replaceImageTags(text, imagesMap) {
+            text = text.replace(/\[IMAGEN:\s*([^\]]+)\]/gi, (match, id) => {
+                const cleanId = id.trim();
+                if (imagesMap && imagesMap[cleanId]) {
+                    return `\n<img src="${imagesMap[cleanId]}" width="500" style="max-width:100%; margin:15px auto; display:block;" />\n`;
+                }
+                return match;
+            });
+
+            text = text.replace(/\[(?:Insertar imagen|IMAGEN):\s*([^\]]+)\]/gi, (match, query) => {
+                const cleanQuery = query.trim().toLowerCase();
+                if (imagesMap[cleanQuery]) {
+                    return `\n<img src="${imagesMap[cleanQuery]}" width="500" style="max-width:100%; margin:15px auto; display:block;" />\n`;
+                }
+                for (let ext of ['', '.jpg', '.jpeg', '.png', '.webp']) {
+                    const trial = cleanQuery + ext;
+                    if (imagesMap[trial]) {
+                        return `\n<img src="${imagesMap[trial]}" width="500" style="max-width:100%; margin:15px auto; display:block;" />\n`;
+                    }
+                }
+                return match; 
+            });
+
+            return text;
+        }
+
+        async function transformTablesToImages(htmlString) {
+            if (!htmlString.includes('<table')) return htmlString;
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = htmlString;
+            const tables = tempDiv.querySelectorAll('table');
+            if (tables.length === 0) return htmlString;
+
+            const captureZone = document.createElement('div');
+            captureZone.style.position = 'absolute';
+            captureZone.style.top = '-9999px';
+            captureZone.style.left = '-9999px';
+            captureZone.style.width = '1000px'; 
+            
+            const style = document.createElement('style');
+            style.innerHTML = `
+                .table-studio { padding: 30px; background: #fff; display: inline-block; min-width: 800px; box-sizing: border-box; }
+                .table-studio table { width: 100%; border-collapse: collapse; font-family: 'Segoe UI', sans-serif; font-size: 16px; color: #000; line-height: 1.5; }
+                .table-studio th, .table-studio td { border: 1px solid #334155; padding: 12px; text-align: left; vertical-align: top; }
+                .table-studio th { background-color: #f1f5f9; font-weight: bold; text-align: center;}
+            `;
+            captureZone.appendChild(style);
+            document.body.appendChild(captureZone);
+
+            for (let i = 0; i < tables.length; i++) {
+                const table = tables[i];
+                const wrapper = document.createElement('div');
+                wrapper.className = 'table-studio';
+                wrapper.appendChild(table.cloneNode(true));
+                captureZone.appendChild(wrapper);
+                
+                try {
+                    const canvas = await html2canvas(wrapper, { scale: 2, backgroundColor: '#ffffff', logging: false });
+                    const imgData = canvas.toDataURL('image/png');
+                    const img = document.createElement('img');
+                    img.src = imgData;
+                    img.setAttribute('width', '500');
+                    img.dataset.width = canvas.width / 2;
+                    img.dataset.height = canvas.height / 2;
+                    img.style.maxWidth = '100%';
+                    img.style.margin = '15px 0';
+                    img.style.display = 'block';
+                    table.parentNode.replaceChild(img, table);
+                } catch (err) { console.error("Error al fotografiar la tabla:", err); }
+                captureZone.removeChild(wrapper);
+            }
+            const resultHtml = tempDiv.innerHTML;
+            document.body.removeChild(captureZone);
+            return resultHtml;
+        }
+
+        // ===================================================================================
+        // EXPORTACIONES
+        // ===================================================================================
+        
+        exportPdfBtn.addEventListener('click', async () => {
+            const cards = document.querySelectorAll('.chapter-card');
+            if (!Array.from(cards).some(c => c.querySelector('.chapter-textarea').value.trim() !== "")) return alert("El libro está vacío.");
+
+            const originalBtnHtml = exportPdfBtn.innerHTML;
+            exportPdfBtn.innerHTML = 'Procesando...';
+            exportPdfBtn.disabled = true;
+
+            try {
+                const fSize = parseInt(fontSizeSlider.value); 
+                const docDefinition = { pageSize: 'A4', pageMargins: [50, 60, 50, 60], content: [], defaultStyle: { fontSize: fSize, lineHeight: 1.15 } };
+
+                if (checkCover.checked && coverPreview.src) docDefinition.content.push({ image: coverPreview.src, width: 595.28, height: 841.89, margin: [-50, -60, -50, -60], pageBreak: 'after' });
+
+                for (let index = 0; index < cards.length; index++) {
+                    const card = cards[index];
+                    const rawText = card.querySelector('.chapter-textarea').value.trim();
+                    if (!rawText) continue;
+                    
+                    const imagesMap = JSON.parse(card.dataset.images || "{}");
+                    const textWithImages = replaceImageTags(rawText, imagesMap);
+                    const mdText = autoFormatText(textWithImages);
+                    let htmlContent = marked.parse(mdText);
+                    htmlContent = await transformTablesToImages(htmlContent);
+
+                    let pdfMakeObjects = htmlToPdfmake(htmlContent, {
+                        defaultStyles: {
+                            h1: { fontSize: fSize + 12, bold: true, margin: [0, 15, 0, 10], color: '#1a365d' },
+                            h2: { fontSize: fSize + 6, bold: true, margin: [0, 12, 0, 6], color: '#2d3748' },
+                            h3: { fontSize: fSize + 2, bold: true, margin: [0, 10, 0, 4] },
+                            p:  { margin: [0, 0, 0, fSize - 2] }
+                        }
+                    });
+                    
+                    if (!Array.isArray(pdfMakeObjects)) pdfMakeObjects = [pdfMakeObjects];
+                    docDefinition.content.push({ stack: pdfMakeObjects, pageBreak: (index === cards.length - 1) ? undefined : 'after' });
+                }
+                pdfMake.createPdf(docDefinition).download(getBookFileName() + '.pdf');
+            } catch (error) { alert("Ocurrió un error."); console.error(error); } 
+            finally { exportPdfBtn.innerHTML = originalBtnHtml; exportPdfBtn.disabled = false; }
+        });
+
+        function base64ToArrayBuffer(dataURI) {
+            const binaryString = window.atob(dataURI.split(',')[1]);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
+            return bytes.buffer;
+        }
+
+        exportWordBtn.addEventListener('click', async () => {
+            const cards = document.querySelectorAll('.chapter-card');
+            if (!Array.from(cards).some(c => c.querySelector('.chapter-textarea').value.trim() !== "")) return alert("El libro está vacío.");
+
+            const originalBtnHtml = exportWordBtn.innerHTML;
+            exportWordBtn.innerHTML = 'Procesando...';
+            exportWordBtn.disabled = true;
+
+            try {
+                const { Document, Packer, Paragraph, TextRun, HeadingLevel, ImageRun, PageBreak, convertInchesToTwip } = docx;
+                let sections = [];
+                const fSize = parseInt(fontSizeSlider.value); 
+
+                if (checkCover.checked && coverPreview.src) {
+                    sections.push({
+                        properties: { page: { margin: { top: 0, right: 0, bottom: 0, left: 0 }, size: { width: convertInchesToTwip(8.27), height: convertInchesToTwip(11.69) } } },
+                        children: [new Paragraph({ children: [new ImageRun({ data: base64ToArrayBuffer(coverPreview.src), transformation: { width: 794, height: 1123 } })] })]
+                    });
+                }
+
+                let chapterChildren = [];
+
+                for (let index = 0; index < cards.length; index++) {
+                    const card = cards[index];
+                    const rawText = card.querySelector('.chapter-textarea').value.trim();
+                    if (!rawText) continue;
+                    
+                    const imagesMap = JSON.parse(card.dataset.images || "{}");
+                    const textWithImages = replaceImageTags(rawText, imagesMap);
+                    const mdText = autoFormatText(textWithImages);
+                    let htmlContent = marked.parse(mdText);
+                    htmlContent = await transformTablesToImages(htmlContent);
+                    
+                    const div = document.createElement('div');
+                    div.innerHTML = htmlContent;
+
+                    function parseText(node, styles = {}, baseSizePt) {
+                        let runs = [];
+                        for (let child of node.childNodes) {
+                            if (child.nodeType === 3) {
+                                const textVal = child.nodeValue.replace(/\n/g, ' '); 
+                                if(textVal.trim() === '' && textVal.length > 0 && runs.length === 0) continue; 
+                                runs.push(new TextRun({ text: textVal, size: baseSizePt * 2, ...styles }));
+                            } else if (child.nodeType === 1) {
+                                let newStyles = { ...styles };
+                                if (child.nodeName === 'STRONG' || child.nodeName === 'B') newStyles.bold = true;
+                                if (child.nodeName === 'EM' || child.nodeName === 'I') newStyles.italics = true;
+                                runs = runs.concat(parseText(child, newStyles, baseSizePt));
+                            }
+                        }
+                        return runs;
+                    }
+
+                    for (let child of div.childNodes) {
+                        if (child.nodeType === 1) {
+                            let imgTag = child.nodeName === 'IMG' ? child : child.querySelector('img');
+                            if (imgTag && imgTag.src.startsWith('data:image')) {
+                                const w = parseInt(imgTag.dataset.width) || 500;
+                                const h = parseInt(imgTag.dataset.height) || 300;
+                                const scale = Math.min(1, 450 / w); 
+                                chapterChildren.push(new Paragraph({
+                                    children: [new ImageRun({ data: base64ToArrayBuffer(imgTag.src), transformation: { width: w * scale, height: h * scale } })],
+                                    spacing: { before: 200, after: 200 }
+                                }));
+                                if (child.nodeName === 'IMG') continue;
+                            }
+
+                            if (child.nodeName.match(/^H([1-6])$/)) {
+                                let hd = HeadingLevel.HEADING_1; let titleSize = fSize + 12; 
+                                if (child.nodeName === 'H2') { hd = HeadingLevel.HEADING_2; titleSize = fSize + 6; }
+                                if (child.nodeName === 'H3') { hd = HeadingLevel.HEADING_3; titleSize = fSize + 2; }
+                                chapterChildren.push(new Paragraph({ children: parseText(child, {}, titleSize), heading: hd, keepNext: true, spacing: { before: 240, after: 120 } }));
+                            } else if (child.nodeName === 'P' && !imgTag) {
+                                chapterChildren.push(new Paragraph({ children: parseText(child, {}, fSize), spacing: { after: 200 } }));
+                            } else if (child.nodeName === 'UL' || child.nodeName === 'OL') {
+                                for(let li of child.childNodes) {
+                                    if(li.nodeType === 1 && li.nodeName === 'LI') {
+                                        chapterChildren.push(new Paragraph({ children: parseText(li, {}, fSize), bullet: { level: 0 }, spacing: { after: 100 } }));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if (index !== cards.length - 1) chapterChildren.push(new Paragraph({ children: [new PageBreak()] }));
+                }
+
+                sections.push({ properties: { page: { margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 }, size: { width: convertInchesToTwip(8.27), height: convertInchesToTwip(11.69) } } }, children: chapterChildren });
+                const doc = new Document({ sections });
+                const blob = await Packer.toBlob(doc);
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a'); a.href = url; a.download = getBookFileName() + '.docx';
+                document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+            } catch (error) { alert("Ocurrió un error."); console.error(error); } 
+            finally { exportWordBtn.innerHTML = originalBtnHtml; exportWordBtn.disabled = false; }
+        });
+
+        exportEpubBtn.addEventListener('click', async () => {
+            const cards = document.querySelectorAll('.chapter-card');
+            if (!Array.from(cards).some(c => c.querySelector('.chapter-textarea').value.trim() !== "")) return alert("El libro está vacío.");
+
+            const originalBtnHtml = exportEpubBtn.innerHTML;
+            exportEpubBtn.innerHTML = 'Procesando...';
+            exportEpubBtn.disabled = true;
+
+            try {
+                const zip = new JSZip();
+                zip.file("mimetype", "application/epub+zip");
+                
+                const metaInf = zip.folder("META-INF");
+                metaInf.file("container.xml", `<?xml version="1.0"?><container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container"><rootfiles><rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/></rootfiles></container>`);
+
+                const oebps = zip.folder("OEBPS");
+                oebps.file("style.css", `body { font-family: sans-serif; font-size: ${(parseInt(fontSizeSlider.value) / 12).toFixed(2)}em; line-height: 1.5; padding: 1em; } h1 { font-size: 1.8em; margin-bottom: 0.5em; text-align: center; color: #333; page-break-before: always; } h2 { font-size: 1.4em; margin-bottom: 0.5em; color: #444; } p { margin-bottom: 1em; text-align: justify; } ul, ol { margin-bottom: 1em; padding-left: 1.5em; } img { max-width: 100%; height: auto; display: block; margin: 1em auto; }`);
+
+                let coverMeta = "", coverManifest = "", coverSpine = "", navPoints = "", playOrder = 1;
+                
+                if (checkCover.checked && coverPreview.src) {
+                    const mime = coverPreview.src.match(/data:(.*?);base64/)[1];
+                    const base64Data = coverPreview.src.split(',')[1];
+                    const ext = mime === 'image/png' ? 'png' : 'jpg';
+                    oebps.folder("images").file(`cover.${ext}`, base64Data, {base64: true});
+                    coverMeta = `<meta name="cover" content="cover-image"/>`;
+                    coverManifest = `<item id="cover-image" href="images/cover.${ext}" media-type="${mime}"/><item id="cover" href="cover.xhtml" media-type="application/xhtml+xml"/>`;
+                    coverSpine = `<itemref idref="cover" linear="yes"/>`;
+                    oebps.file("cover.xhtml", `<?xml version="1.0" encoding="utf-8"?><!DOCTYPE html><html xmlns="http://www.w3.org/1999/xhtml" xml:lang="es"><head><title>Portada</title><style type="text/css">body { margin: 0; padding: 0; text-align: center; } img { max-width: 100%; height: 100vh; object-fit: contain; }</style></head><body><img src="images/cover.${ext}" alt="Portada" /></body></html>`);
+                }
+
+                let chapterManifest = "", chapterSpine = "", imgCounter = 1;
+
+                for (let index = 0; index < cards.length; index++) {
+                    const card = cards[index];
+                    const rawText = card.querySelector('.chapter-textarea').value.trim();
+                    if (!rawText) continue; 
+                    
+                    const imagesMap = JSON.parse(card.dataset.images || "{}");
+                    const textWithImages = replaceImageTags(rawText, imagesMap);
+                    const mdText = autoFormatText(textWithImages);
+                    let htmlContent = marked.parse(mdText);
+                    htmlContent = await transformTablesToImages(htmlContent);
+
+                    const div = document.createElement('div');
+                    div.innerHTML = htmlContent;
+                    div.querySelectorAll('img').forEach(img => {
+                        if (img.src.startsWith('data:image')) {
+                            const base64Data = img.src.split(',')[1];
+                            const fileName = `img_content_${index}_${imgCounter}.png`;
+                            oebps.folder("images").file(fileName, base64Data, {base64: true});
+                            chapterManifest += `<item id="img_c_${index}_${imgCounter}" href="images/${fileName}" media-type="image/png"/>\n`;
+                            img.src = `images/${fileName}`; 
+                            imgCounter++;
+                        }
+                    });
+
+                    htmlContent = div.innerHTML.replace(/<(img|br|hr|input|meta|link)([^>]*?)\/?>/gi, '<$1$2/>');
+
+                    const chapterId = `chapter_${index+1}`;
+                    let chapterTitle = `Capítulo ${index+1}`;
+                    const match = mdText.match(/^#+\s*(.+)$/m);
+                    if (match && match[1].trim()) chapterTitle = match[1].trim();
+
+                    navPoints += `<navPoint id="navPoint-${playOrder}" playOrder="${playOrder}"><navLabel><text>${escapeXML(chapterTitle)}</text></navLabel><content src="${chapterId}.xhtml"/></navPoint>`;
+                    playOrder++;
+
+                    chapterManifest += `<item id="${chapterId}" href="${chapterId}.xhtml" media-type="application/xhtml+xml"/>\n`;
+                    chapterSpine += `<itemref idref="${chapterId}"/>\n`;
+
+                    oebps.file(`${chapterId}.xhtml`, `<?xml version="1.0" encoding="utf-8"?><!DOCTYPE html><html xmlns="http://www.w3.org/1999/xhtml" xml:lang="es"><head><title>${escapeXML(chapterTitle)}</title><link rel="stylesheet" type="text/css" href="style.css"/></head><body>${htmlContent}</body></html>`);
+                }
+
+                const realTitle = bookTitleInput.value.trim() || "Mi Libro";
+
+                oebps.file("content.opf", `<?xml version="1.0" encoding="UTF-8"?><package xmlns="http://www.idpf.org/2007/opf" unique-identifier="BookId" version="3.0"><metadata xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:title>${escapeXML(realTitle)}</dc:title><dc:language>es</dc:language><dc:identifier id="BookId">urn:uuid:${Math.random().toString(36).substring(2, 15)}</dc:identifier>${coverMeta}</metadata><manifest><item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/><item id="style" href="style.css" media-type="text/css"/>${coverManifest}${chapterManifest}</manifest><spine toc="ncx">${coverSpine}${chapterSpine}</spine></package>`);
+                oebps.file("toc.ncx", `<?xml version="1.0" encoding="UTF-8"?><ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1"><head><meta name="dtb:uid" content="urn:uuid:12345"/><meta name="dtb:depth" content="1"/><meta name="dtb:totalPageCount" content="0"/><meta name="dtb:maxPageNumber" content="0"/></head><docTitle><text>${escapeXML(realTitle)}</text></docTitle><navMap>${navPoints}</navMap></ncx>`);
+
+                const blob = await zip.generateAsync({type: "blob", mimeType: "application/epub+zip"});
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a'); a.href = url; a.download = getBookFileName() + '.epub';
+                document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+            } catch (error) { alert("Ocurrió un error."); console.error(error); } 
+            finally { exportEpubBtn.innerHTML = originalBtnHtml; exportEpubBtn.disabled = false; }
+        });
+    </script>
+</body>
+</html>
